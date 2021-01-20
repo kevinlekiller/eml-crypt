@@ -68,9 +68,13 @@ if ! [[ $ECMODE =~ ^[dr]ecrypt$ ]]; then
     exit 1
 fi
 
-if [[ $ECMODE == "recrypt" ]] && [[ -z $PGPKEYID ]] && [[ $(gpg --list-keys | grep $PGPKEYID) != "" ]]; then
+if [[ $ECMODE == "recrypt" ]] && [[ -z $PGPKEYID ]]; then
     echo "You must set the PGP key id to encrypt the emails to the PGPKEYID variable."
-    echo "Make sure the key is listed in gpg --list-keys"
+    exit 1
+fi
+
+if [[ $ECMODE == "recrypt" ]] && [[ $(gpg --list-keys | grep $PGPKEYID) == "" ]]; then
+    echo "PGP key not found. Make sure the key is listed in gpg --list-keys"
     exit 1
 fi
 
