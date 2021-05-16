@@ -1,5 +1,5 @@
 #!/bin/bash
-<<LICENSE
+cat > /dev/null <<LICENSE
     Copyright (C) 2021  kevinlekiller
     
     This program is free software; you can redistribute it and/or
@@ -18,7 +18,7 @@
     https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html
 LICENSE
 
-<<DESCRIPTION
+cat > /dev/null <<DESCRIPTION
     Bash script to re-encrypt or decrypt .eml files using gpg and your PGP key.
     Requires grep, perl, gpg.
     Tested with mailbox.org encrypted emails and Thunderbird.
@@ -58,7 +58,7 @@ if [[ $OUTCHECK == 1 ]] && [[ -d $OUTPATH ]]; then
     exit 1
 fi
 
-if [[ $INPATH == $OUTPATH ]]; then
+if [[ $INPATH == "$OUTPATH" ]]; then
     echo "Input and Output directories must be different."
     exit 1
 fi
@@ -73,12 +73,12 @@ if [[ $ECMODE == "recrypt" ]] && [[ -z $PGPKEYID ]]; then
     exit 1
 fi
 
-if [[ $ECMODE == "recrypt" ]] && [[ $(gpg --list-keys | grep $PGPKEYID) == "" ]]; then
+if [[ $ECMODE == "recrypt" ]] && [[ $(gpg --list-keys | grep "$PGPKEYID") == "" ]]; then
     echo "PGP key not found. Make sure the key is listed in gpg --list-keys"
     exit 1
 fi
 
-cd "$INPATH"
+cd "$INPATH" || exit
 OUTPATH="$(echo "$OUTPATH" | sed 's#/*$##')"
 mkdir -p "$OUTPATH"
 
@@ -90,28 +90,26 @@ for eml_file in *.eml; do
             gpg --decrypt 2> /dev/null <<< $(grep -Pzoi '\-+BEGIN PGP MESSAGE\-+(\r|\n|.)+\-+END PGP MESSAGE\-+.+[\r\n]' "$eml_file") >> "$OUTPATH/$eml_file"
         else
             MESSAGE="Recrypting: $eml_file"
-            boundary1=$RANDOM
-            boundary2=$RANDOM
-            boundary3=$RANDOM
+            boundary="$RANDOM/$RANDOM/$RANDOM/eml-crypt.sh"
             echo "Content-Type: multipart/encrypted;
         protocol=\"application/pgp-encrypted\";
-        boundary=\"$boundary1/$boundary2/$boundary3/eml-crypt.sh\"
+        boundary=\"$boundary\"
 
 This is a MIME-encapsulated message.
 
---$boundary1/$boundary2/$boundary3/eml-crypt.sh
+--$boundary
 Content-Type: application/pgp-encrypted
 Content-Disposition: attachment
 
 Version: 1
 
---$boundary1/$boundary2/$boundary3/eml-crypt.sh
+--$boundary
 Content-Type: application/octet-stream
 Content-Disposition: inline; filename=\"msg.asc\"
 " >> "$OUTPATH/$eml_file"
-            gpg --decrypt 2> /dev/null <<< $(grep -Pzoi '\-+BEGIN PGP MESSAGE\-+(\r|\n|.)+\-+END PGP MESSAGE\-+.+[\r\n]' "$eml_file") | gpg --encrypt --recipient $PGPKEYID --armor 2> /dev/null >> "$OUTPATH/$eml_file"
+            gpg --decrypt 2> /dev/null <<< $(grep -Pzoi '\-+BEGIN PGP MESSAGE\-+(\r|\n|.)+\-+END PGP MESSAGE\-+.+[\r\n]' "$eml_file") | gpg --encrypt --recipient "$PGPKEYID" --armor 2> /dev/null >> "$OUTPATH/$eml_file"
             echo "
---$boundary1/$boundary2/$boundary3/eml-crypt.sh
+--$boundary
 
 " >> "$OUTPATH/$eml_file"
         fi
